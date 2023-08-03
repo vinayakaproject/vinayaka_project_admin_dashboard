@@ -6,7 +6,7 @@ export const getUser = async () => {
 }
 
 export const userFun = async (urlPath, body, method) => { 
-    const BACKEND_URL = 'http://192.168.186.3:5000/api/admin/';
+    const BACKEND_URL = 'https://vinayaka-project-backend.onrender.com/api/admin/';
     const url = BACKEND_URL + urlPath;
 
     const headers = {
