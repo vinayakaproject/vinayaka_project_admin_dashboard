@@ -39,17 +39,18 @@ const App = () => {
 
   if(loading === true) {
     return null;
+  }else {
+    return (
+      <MyGlobalContext.Provider value={{ user, setUser }}>
+          <Switch>
+              <Route path={`/auth`} component={AuthLayout} />
+              <Route path={`/admin`} component={AdminLayout} />
+              <Route path={`/rtl`} component={RTLLayout} />
+              <Redirect from={`/`} to={"/admin/dashboard"} />
+          </Switch>
+      </MyGlobalContext.Provider>
+    )
   }
-  return (
-    <MyGlobalContext.Provider value={{ user, setUser }}>
-        <Switch>
-            <Route path={`/auth`} component={AuthLayout} />
-            <Route path={`/admin`} component={AdminLayout} />
-            <Route path={`/rtl`} component={RTLLayout} />
-            <Redirect from={`/`} to={"/admin/dashboard"} />
-        </Switch>
-    </MyGlobalContext.Provider>
-  )
 }
 
 export default App;

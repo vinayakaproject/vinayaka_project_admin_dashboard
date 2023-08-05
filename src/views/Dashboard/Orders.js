@@ -26,7 +26,6 @@ import { useEffect, useState, useRef } from "react";
 import Card from "components/Card/Card.js";
 import CardBody from "components/Card/CardBody.js";
 import CardHeader from "components/Card/CardHeader.js";
-import React from "react";
 import { tablesProjectData } from "variables/general";
 import Loading from "components/Loading/Loading";
 import { userFun } from "utils/utilites";
@@ -52,6 +51,7 @@ function Orders() {
   const toast = useToast()
 
   const allOrders = localStorage.getItem('allOrders') ? JSON.parse(localStorage.getItem('allOrders')) : null;
+  const productOrderQuery = localStorage.getItem('productOrderQuery') ? JSON.parse(localStorage.getItem('productOrderQuery')) : {};
 
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState(allOrders);
@@ -66,7 +66,9 @@ function Orders() {
     const fetchOrders = async () => {
       console.log("In fetch")
       setLoading(true);
-      const order = await userFun('getAllOrders', null, 'GET');
+      const order = await userFun('getAllOrders', {
+        query: productOrderQuery
+      }, 'POST');
       
       if(order.status === 201) {
         console.log(order);    
@@ -83,6 +85,7 @@ function Orders() {
       }
       setLoading(false);
     }
+    console.log(allOrders)
     !allOrders && fetchOrders()
   }, [])
 
@@ -180,7 +183,8 @@ function Orders() {
     const value = e.target.value;
     setfilterStat(value);
 
-    const query =  (value === 'All' || value ===  '') ? { status: { $ne: 'Cancelled' } } : { 
+    const query =  (value === 'All' || value ===  '') ? { ...productOrderQuery, status: { $ne: 'Cancelled' } } : { 
+      ...productOrderQuery,
       status: value
     }
 
@@ -208,7 +212,8 @@ function Orders() {
   const showMore = async () => { 
     setshowMoreLoading(true);
 
-    const query = (filterStat === 'All' || filterStat ===  '') ? { status: { $ne: 'Cancelled' } } : { 
+    const query = (filterStat === 'All' || filterStat ===  '') ? { ...productOrderQuery, status: { $ne: 'Cancelled' } } : { 
+      ...productOrderQuery,
       status: filterStat
     }
 
@@ -249,6 +254,11 @@ function Orders() {
       default:
         return 'gray.300'
     }
+  }
+
+  const cancelProdFilter = () => {
+    localStorage.removeItem('productOrderQuery');
+    window.location.reload();
   }
 
   if(loading === true && orders === null) return <Loading mt={10} pt={20} color={'#fff'} />;
@@ -311,8 +321,11 @@ function Orders() {
               Orders
             </Text>
           </CardHeader>
-          <Flex justifyContent={'flex-end'} width={'20%'} pl={10}>
-            <SelectStatus onChange={filterOrders} variant="filled" placeholder='Filter by status' type="filter" />
+          <Flex justifyContent={'flex-end'} gap={2}>
+            {
+              Object.keys(productOrderQuery).length > 0 && <Button width={'100%'} colorScheme='red' color='#fff' onClick={cancelProdFilter}>Cancel Product Filter</Button>
+            }
+            <SelectStatus onChange={filterOrders} pl={Object.keys(productOrderQuery).length > 0 ? 0 : 10} variant="filled" placeholder='Filter by status' type="filter" />
           </Flex>
         </Flex>
         <CardBody>

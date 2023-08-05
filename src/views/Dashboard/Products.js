@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { 
   useToast,
   Box,
@@ -25,13 +25,34 @@ import {
   Grid,
   useDisclosure,
   Image,
+  Select,
 } from '@chakra-ui/react';
+import { CloseIcon } from '@chakra-ui/icons'
 import Loading from "components/Loading/Loading";
 import { userFun } from "utils/utilites";
 import supabaseClient from 'utils/supabaseClient';
 import { createObjectID }  from 'mongo-object-reader';
+import { useHistory } from 'react-router-dom';
 
-const ProductCard = ({ product, onEdit, onDelete }) => (
+const operators = [
+  { label: 'Equals', value: '$eq' },
+  { label: 'Not equal', value: '$ne' },
+  { label: 'Greater Than', value: '$gt' },
+  { label: 'Less Than', value: '$lt' },
+  { label: 'Greater Than or Equal to', value: '$gte' },
+  { label: 'Less Than or Equal to', value: '$lte' },
+  { label: 'In', value: '$in' },
+]
+
+const productParams = [
+  { label: 'Id', value: '_id' },
+  { label: 'Name', value: 'name' },
+  { label: 'Price', value: 'price' },
+  { label: 'Category', value: 'category' },
+  { label: 'Net Weight', value: 'net_weight' },
+]
+
+const ProductCard = ({ product, onEdit, onDelete, onViewOrder }) => (
   <Box borderWidth="1px" borderRadius="md" p="4" bgColor={'#fff'} shadow="md">
     <Box as="h2" fontSize="md" pr={20} fontWeight="semibold">
       Product ID: {product._id}
@@ -52,7 +73,8 @@ const ProductCard = ({ product, onEdit, onDelete }) => (
       Net Weight: {product.net_weight}
     </Box>
 
-    <Button mt="3" onClick={() => onEdit(product)}>Edit</Button>
+    <Button mt="3" colorScheme='blue' onClick={() => onViewOrder(product._id)}>View Orders</Button>
+    <Button mt="3" ml="2" onClick={() => onEdit(product)}>Edit</Button>
     <Button mt="3" ml="2" colorScheme='red' onClick={() => onDelete(product)}>Delete</Button>
   </Box>
 );
@@ -60,16 +82,25 @@ const ProductCard = ({ product, onEdit, onDelete }) => (
 const Products = () => {
   const toast = useToast()
 
+  const history = useHistory();
+
   const { isOpen, onOpen, onClose } = useDisclosure()
   const cancelRef = useRef()
+  const prodFetchedRef = useRef(false)
 
-  const allProducts = localStorage.getItem('allProducts') ? JSON.parse(localStorage.getItem('allProducts')) : [];
+  var allProducts = localStorage.getItem('allProducts') ? JSON.parse(localStorage.getItem('allProducts')) : [];
+  const productsFilters = localStorage.getItem('productsFilters') ? JSON.parse(localStorage.getItem('productsFilters')) : [];
+  const productQuery = localStorage.getItem('productsQuery') ? JSON.parse(localStorage.getItem('productsQuery')) : {};
 
   const [loading, setLoading] = useState(true);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+  const [filterModel, setfilterModel] = useState(false);
+  const [filters, setfilters] = useState(productsFilters);
+  const [query, setQuery] = useState(productQuery);
   const [products, setProducts] = useState(allProducts);
   const [createBtnLoad, setcreateBtnLoad] = useState(false);
   const [editBtnLoad, seteditBtnLoad] = useState(false);
+  const [applyFilterLoad, setapplyFilterLoad] = useState(false);
   const [deleteConLoad, setdeleteConLoad] = useState(false);
   const [showMoreLoading, setshowMoreLoading] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -168,19 +199,32 @@ const Products = () => {
     setcreateBtnLoad(false);
   };
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     console.log("In fetch")
     setLoading(true);
+    console.log(query)
     console.log(products.length)
     const productsFetch = await userFun('getAllProducts', {
+      query: query,
       skip: products.length
     }, 'POST');
     
     if(productsFetch.status === 201) {
-      console.log(productsFetch);    
-      const newProducts = [...products, ...productsFetch.message] 
-      localStorage.setItem('allProducts', JSON.stringify(newProducts))
-      setProducts(newProducts)
+      console.log(productsFetch); 
+      console.log(products);   
+      if(productsFetch.message.length === 0) {
+        toast({
+            title: '',
+            description: "No products to show",
+            status: 'warning',
+            duration: 9000,
+            isClosable: true,
+        })
+      }else {
+        const newProducts = [...products, ...productsFetch.message] 
+        localStorage.setItem('allProducts', JSON.stringify(newProducts))
+        setProducts(newProducts)
+      }
     }else {
         toast({
             title: 'Error',
@@ -190,18 +234,21 @@ const Products = () => {
             isClosable: true,
         })
     }
+    console.log("Returned");
     setLoading(false);
-  }
+  }, [products, query]) 
 
   useEffect(() => {
-    console.log("In use effect")
-    console.log(allProducts)
+    console.log("In effect");
+    console.log(prodFetchedRef.current);
+    if(prodFetchedRef.current) return;
+    prodFetchedRef.current = true;
     allProducts.length === 0 && fetchProducts()
     window.onbeforeunload = function () {
       console.log("In onbeforeunload");
       localStorage.removeItem('allProducts')
     };
-  }, [])
+  }, [allProducts])
 
   const handleEditProduct = (productToEdit) => {
     console.log(productToEdit)
@@ -210,6 +257,15 @@ const Products = () => {
     setWeight(productToEdit.net_weight);
     setPrice(productToEdit.price);
     setEditingProduct(productToEdit);
+  };
+
+  const handleViewOrders = (prodId) => {
+    const productOrderQuery = {
+      productId: prodId,
+    }
+    localStorage.setItem("productOrderQuery", JSON.stringify(productOrderQuery));
+    localStorage.removeItem('allOrders');
+    history.push('/admin/orders');
   };
 
   const handleSaveEdit = async (editedProduct) => {
@@ -343,7 +399,10 @@ const Products = () => {
         if(product.status === 201) {
           const updatedProducts = products.filter((product) => product._id !== deletingProduct._id)
           if(updatedProducts.length === 0) { 
-            fetchProducts();
+            localStorage.removeItem('allProducts');
+            prodFetchedRef.current = false;
+            allProducts = [];
+            setProducts(allProducts);
           }else {
             localStorage.setItem('allProducts', JSON.stringify(updatedProducts))
             setProducts(updatedProducts);
@@ -379,12 +438,55 @@ const Products = () => {
       setshowMoreLoading(false);
     });
   }
+
+  const addFilter = () => {
+    const newFilter = {
+      field: "",
+      operator: "",
+      value: "",
+    }
+    setfilters([...filters, newFilter]);
+  }
   
+  const applyFilter = async () => { 
+    setapplyFilterLoad(true);
+    console.log(filters);
+    const emptyFilter = filters.filter((filter) => filter.field === "" || filter.operator === "" || filter.value === "");
+    if(emptyFilter.length > 0) { 
+      toast({
+        title: 'Error',
+        description: 'Please fill all the filter fields',
+        status: 'error',
+        duration: 9000,
+        isClosable: true,
+      })
+    }else {
+      var queryLoc = {};
+      filters.map((filter) => {
+        const fieldOperator = filter.operator.toString();
+        return queryLoc[filter.field] = {
+          [fieldOperator]: filter.value
+        }
+      });
+      console.log(queryLoc);
+      setQuery(queryLoc);
+      localStorage.setItem('productsQuery', JSON.stringify(queryLoc));
+      localStorage.setItem('productsFilters', JSON.stringify(filters));
+      localStorage.removeItem('allProducts');
+      prodFetchedRef.current = false;
+      allProducts = [];
+      setProducts(allProducts);
+    }
+    setapplyFilterLoad(false);
+    setfilterModel(false);
+  }
+
   if(loading === true && products.length === 0) return <Loading mt={10} pt={20} color={'#fff'} />;
   return (
     <Box p="4" mt={20}>
       <Flex justifyContent="space-between" alignItems="center">
         <Button onClick={() => setIsCreatingProduct(true)}>Create Product</Button>
+        <Button onClick={() => setfilterModel(true)}>{filters.length > 0 ? `${filters.length} active ` : ``} Filter{filters.length > 1 ? 's' : ''}</Button>
       </Flex>
       <Box mt="4">
         <Grid templateColumns='repeat(3, 1fr)' gap={6}>
@@ -394,13 +496,16 @@ const Products = () => {
               product={product}
               onEdit={handleEditProduct}
               onDelete={handleDeleteProduct}
+              onViewOrder={handleViewOrders}
             />
           ))}
         </Grid>
       </Box>
-      <Flex justifyContent={'center'} mt={10}>
-        <Button colorScheme='blue' color='#fff' onClick={showMore} isLoading={showMoreLoading}>Show More</Button>
-      </Flex>
+      {
+        products.length > 0 && <Flex justifyContent={'center'} mt={10}>
+          <Button colorScheme='blue' color='#fff' onClick={showMore} isLoading={showMoreLoading}>Show More</Button>
+        </Flex>
+      }
 
       <AlertDialog
         isOpen={isOpen}
@@ -428,6 +533,78 @@ const Products = () => {
           </AlertDialogContent>
         </AlertDialogOverlay>
       </AlertDialog>
+      <Modal isOpen={filterModel} onClose={() => setfilterModel(false)}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Filter Products</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {
+              filters.length > 0 && filters.map((filter, index) => (
+              <Flex key={index} gap={5} mt={index === 0 ? 0 : 5}>
+                <FormControl>
+                    <FormLabel>Field</FormLabel>
+                    <Select variant="filled" defaultValue={filter.field} onChange={(e) => {
+                      const newFilters = [...filters];
+                      newFilters[index].field = e.target.value;
+                      setfilters(newFilters);
+                    }} placeholder='Select option'>
+                      {
+                        productParams.map((param) => ( 
+                          <option value={param.value}>{param.label}</option>
+                        ))
+                      }
+                    </Select>
+                </FormControl>
+                <FormControl>
+                    <FormLabel>Operator</FormLabel>
+                    <Select variant="filled" defaultValue={filter.operator} onChange={(e) => {
+                      const newFilters = [...filters];
+                      newFilters[index].operator = e.target.value;
+                      setfilters(newFilters);
+                    }}  placeholder='Select option'>
+                      {
+                        operators.map((param) => ( 
+                          <option value={param.value}>{param.label}</option>
+                        ))
+                      }
+                    </Select>
+                </FormControl>
+                <FormControl>
+                    <FormLabel>Value</FormLabel>
+                    <Input defaultValue={filter.value} type='text' onChange={(e) => {
+                      const newFilters = [...filters];
+                      newFilters[index].value = e.target.value;
+                      setfilters(newFilters);
+                    }}  placeholder='Enter Value here...' />
+                </FormControl>
+                <Flex mt={43} onClick={() => {
+                  const newFilters = [...filters];
+                  newFilters.splice(index, 1);
+                  setfilters(newFilters);
+                }} cursor={'pointer'}>
+                  <CloseIcon color={'gray.500'} />
+                </Flex>
+              </Flex>
+              ))
+            }
+            <Flex mt={5} gap={3}>
+              <Button onClick={addFilter}>Add Filter</Button> 
+              {
+                filters.length > 0 && <Button colorScheme='red' onClick={() => setfilters([])}>Reset</Button>
+              }
+            </Flex>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button colorScheme="blue" mr={3} isLoading={applyFilterLoad} onClick={applyFilter}>
+              Apply Filter
+            </Button>
+            <Button onClick={() => setfilterModel(false)}>Cancel</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
       <Modal isOpen={isCreatingProduct} onClose={() => setIsCreatingProduct(false)}>
         <ModalOverlay />
         <ModalContent>
