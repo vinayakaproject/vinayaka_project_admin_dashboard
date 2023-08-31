@@ -63,6 +63,9 @@ const ProductCard = ({ product, onEdit, onDelete, onViewOrder }) => (
     <Box mt="2" color="gray.600">
       Product Name: {product.name}
     </Box>
+    <Box mt="2" color="gray.600" noOfLines={1}>
+      Description: {product.description ? product.description : "null"}
+    </Box>
     <Box mt="2" color="gray.600">
       Price: ₹{product.price}
     </Box>
@@ -107,6 +110,7 @@ const Products = () => {
   const [deletingProduct, setDeletingProduct] = useState(null);
 
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [cat, setCat] = useState("");
   const [weight, setWeight] = useState("");
   const [price, setPrice] = useState("");
@@ -177,6 +181,7 @@ const Products = () => {
             const product = await userFun('addProducts', { 
                 _id: prodId,
                 name,
+                description,
                 category: cat,
                 net_weight: weight,
                 price,
@@ -253,6 +258,7 @@ const Products = () => {
   const handleEditProduct = (productToEdit) => {
     console.log(productToEdit)
     setName(productToEdit.name);
+    setDescription(productToEdit.description);
     setCat(productToEdit.category);
     setWeight(productToEdit.net_weight);
     setPrice(productToEdit.price);
@@ -322,6 +328,8 @@ const Products = () => {
             const product = await userFun('updateProduct', { 
               prodId: editedProduct._id,
               updateData: {
+                name,
+                description,
                 category: cat,
                 net_weight: weight,
                 price,
@@ -334,6 +342,7 @@ const Products = () => {
                 console.log(targetProd)
                 if(targetProd) {
                   targetProd.name = name;
+                  targetProd.description = description;
                   targetProd.category = cat;
                   targetProd.net_weight = weight;
                   targetProd.price = price;
@@ -615,6 +624,10 @@ const Products = () => {
                 <FormLabel>Name</FormLabel>
                 <Input type='text' placeholder='Enter Product Name' onChange={(e) => setName(e.target.value)}/>
             </FormControl>
+            <FormControl>
+                <FormLabel>Description</FormLabel>
+                <Input type='text' placeholder='Enter Product Description' onChange={(e) => setDescription(e.target.value)}/>
+            </FormControl>
             <FormControl mt={5}>
                 <FormLabel>Category</FormLabel>
                 <Input placeholder='Enter Product Category' onChange={(e) => setCat(e.target.value)}/>
@@ -660,6 +673,10 @@ const Products = () => {
                 <FormControl>
                     <FormLabel>Name</FormLabel>
                     <Input type='text' placeholder='Enter Product Name' defaultValue={editingProduct.name} onChange={(e) => setName(e.target.value)}/>
+                </FormControl>
+                <FormControl>
+                    <FormLabel>Description</FormLabel>
+                    <Input type='text' placeholder='Enter Product Description' defaultValue={editingProduct.description} onChange={(e) => setDescription(e.target.value)}/>
                 </FormControl>
                 <FormControl mt={5}>
                     <FormLabel>Category</FormLabel>
