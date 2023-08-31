@@ -624,7 +624,7 @@ const Products = () => {
                 <FormLabel>Name</FormLabel>
                 <Input type='text' placeholder='Enter Product Name' onChange={(e) => setName(e.target.value)}/>
             </FormControl>
-            <FormControl>
+            <FormControl mt={5}>
                 <FormLabel>Description</FormLabel>
                 <Input type='text' placeholder='Enter Product Description' onChange={(e) => setDescription(e.target.value)}/>
             </FormControl>
@@ -674,7 +674,7 @@ const Products = () => {
                     <FormLabel>Name</FormLabel>
                     <Input type='text' placeholder='Enter Product Name' defaultValue={editingProduct.name} onChange={(e) => setName(e.target.value)}/>
                 </FormControl>
-                <FormControl>
+                <FormControl mt={5}>
                     <FormLabel>Description</FormLabel>
                     <Input type='text' placeholder='Enter Product Description' defaultValue={editingProduct.description} onChange={(e) => setDescription(e.target.value)}/>
                 </FormControl>
