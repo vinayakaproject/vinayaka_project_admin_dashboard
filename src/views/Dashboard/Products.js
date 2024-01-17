@@ -230,7 +230,7 @@ const Products = () => {
         localStorage.setItem('allProducts', JSON.stringify(newProducts))
         setProducts(newProducts)
       }
-    }else {
+    } else {
         toast({
             title: 'Error',
             description: productsFetch.message,

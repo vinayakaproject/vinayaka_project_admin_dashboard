@@ -4,6 +4,7 @@ import {
   useDisclosure,
   Stack,
   Box,
+  Image,
   useColorMode,
 } from "@chakra-ui/react";
 import Configurator from "components/Configurator/Configurator";
@@ -18,7 +19,8 @@ import {
 import AdminNavbar from "components/Navbars/AdminNavbar.js";
 import Sidebar from "components/Sidebar/Sidebar.js";
 import React, { useState } from "react";
-import { Redirect, Route, Switch } from "react-router-dom";
+import { Redirect, Route, Switch } from "react-router-dom"
+import logo from "assets/img/Logo.png";
 import routes from "routes.js";
 // Custom Chakra theme
 import FixedPlugin from "../components/FixedPlugin/FixedPlugin";
@@ -117,24 +119,10 @@ export default function Dashboard(props) {
         top='0'
       />
       <Sidebar
-        routes={routes}
+        routes={routes.filter((route) => route.name !== "ACCOUNT PAGES")}
         logo={
           <Stack direction='row' spacing='12px' align='center' justify='center'>
-            {colorMode === "dark" ? (
-              <ArgonLogoLight w='74px' h='27px' />
-            ) : (
-              <ArgonLogoDark w='74px' h='27px' />
-            )}
-            <Box
-              w='1px'
-              h='20px'
-              bg={colorMode === "dark" ? "white" : "gray.700"}
-            />
-            {colorMode === "dark" ? (
-              <ChakraLogoLight w='82px' h='21px' />
-            ) : (
-              <ChakraLogoDark w='82px' h='21px' />
-            )}
+            <Image src={logo} />
           </Stack>
         }
         display='none'
@@ -165,14 +153,14 @@ export default function Dashboard(props) {
           </PanelContent>
         ) : null}
         <Footer />
-        <Portal>
+        {/* <Portal>
           <FixedPlugin
             secondary={getActiveNavbar(routes)}
             fixed={fixed}
             onOpen={onOpen}
           />
-        </Portal>
-        <Configurator
+        </Portal> */}
+        {/* <Configurator
           secondary={getActiveNavbar(routes)}
           isOpen={isOpen}
           onClose={onClose}
@@ -180,7 +168,7 @@ export default function Dashboard(props) {
           onSwitch={(value) => {
             setFixed(value);
           }}
-        />
+        /> */}
       </MainPanel>
     </Box>
   );
